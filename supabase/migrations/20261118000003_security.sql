@@ -134,11 +134,15 @@ begin
 end $$;
 
 -- ───────── carry the existing fleet over from v1 ─────────
-insert into public.vehicles (id, plate_code, plate_number, emirate, make, model, year, category, color,
-                             daily_rate, weekly_rate, monthly_rate, odometer, insurance_expiry, registration_expiry, notes)
-select id, coalesce(plate_code, ''), plate_number, coalesce(emirate, 'Dubai'), make, model, year,
-       case when category in ('economy','sedan','suv','sports','luxury','van') then category else 'sedan' end,
-       coalesce(color, ''), daily_rate, weekly_rate, monthly_rate, odometer::int,
-       insurance_expiry, registration_expiry, coalesce(notes, '')
-  from legacy.vehicles
+-- The nine cars from v1, written out so this step does not depend on the legacy schema.
+insert into public.vehicles (id, plate_code, plate_number, emirate, make, model, year, category, daily_rate, weekly_rate, monthly_rate) values
+  ('a0000000-0000-4000-8000-000000000001','G', '18703','Dubai','Chevrolet',    'Corvette Stingray',2023,'sports',1200,7200,26400),
+  ('a0000000-0000-4000-8000-000000000002','CC','60743','Dubai','Chevrolet',    'Camaro',           2023,'sports', 600,3600,13200),
+  ('a0000000-0000-4000-8000-000000000003','B', '42894','Dubai','GMC',          'Yukon',            2024,'suv',    750,4500,16500),
+  ('a0000000-0000-4000-8000-000000000004','CC','76781','Dubai','Ford',         'Mustang',          2025,'sports', 650,3900,14300),
+  ('a0000000-0000-4000-8000-000000000005','D', '87201','Dubai','Nissan',       'Rogue',            2024,'suv',    250,1500, 5500),
+  ('a0000000-0000-4000-8000-000000000006','DD','71278','Dubai','Nissan',       'Sentra',           2024,'sedan',  170,1020, 3740),
+  ('a0000000-0000-4000-8000-000000000007','Q', '83931','Dubai','Nissan',       'Sentra',           2025,'sedan',  180,1080, 3960),
+  ('a0000000-0000-4000-8000-000000000008','DD','83795','Dubai','Nissan',       'Sentra',           2023,'sedan',  160, 960, 3520),
+  ('a0000000-0000-4000-8000-000000000009','O', '45189','Dubai','Mercedes-Benz','E 320',            2023,'luxury', 550,3300,12100)
 on conflict do nothing;

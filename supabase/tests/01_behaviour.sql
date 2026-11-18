@@ -41,9 +41,9 @@ reset role;
 -- 3. agent: can rent, cannot touch fleet / expenses / roles
 select pg_temp.as_user('agent@x.test'); set role authenticated;
 do $$ declare cid uuid; rid uuid; r public.rentals; begin
-  if (select count(*) from public.vehicles) <> 1 then raise exception 'FAIL agent cannot see legacy vehicle'; end if;
-  update public.vehicles set daily_rate = 1 where true;
-  if (select daily_rate from public.vehicles limit 1) = 1 then raise exception 'FAIL agent changed rate'; end if;
+  if (select count(*) from public.vehicles) <> 9 then raise exception 'FAIL agent cannot see the fleet'; end if;
+  update public.vehicles set daily_rate = 1 where id = 'a0000000-0000-4000-8000-000000000001';
+  if (select daily_rate from public.vehicles where id = 'a0000000-0000-4000-8000-000000000001') = 1 then raise exception 'FAIL agent changed rate'; end if;
   begin insert into public.expenses(amount) values (5); raise exception 'FAIL agent expense'; exception when insufficient_privilege then null; end;
   if (select count(*) from public.expenses) <> 0 then raise exception 'FAIL agent reads expenses'; end if;
   update public.profiles set role='admin' where email='agent@x.test';
@@ -116,9 +116,9 @@ reset role;
 select pg_temp.as_user('admin@x.test'); set role authenticated;
 do $$ declare mid uuid; begin
   insert into public.maintenance(vehicle_id, kind, cost, odometer) values ('a0000000-0000-4000-8000-000000000001','service',300,500) returning id into mid;
-  if (select status from public.vehicles limit 1) <> 'maintenance' then raise exception 'FAIL maint status'; end if;
+  if (select status from public.vehicles where id = 'a0000000-0000-4000-8000-000000000001') <> 'maintenance' then raise exception 'FAIL maint status'; end if;
   update public.maintenance set status='done' where id=mid;
-  if (select status||odometer from public.vehicles limit 1) <> 'available500' then raise exception 'FAIL maint done'; end if;
+  if (select status||odometer from public.vehicles where id = 'a0000000-0000-4000-8000-000000000001') <> 'available500' then raise exception 'FAIL maint done'; end if;
   begin update public.profiles set role='agent' where email='admin@x.test'; raise exception 'FAIL last admin demoted'; exception when raise_exception then null; end;
   update public.profiles set active=true where email='pending@x.test';
   if not (select active from public.profiles where email='pending@x.test') then raise exception 'FAIL admin activate'; end if;
