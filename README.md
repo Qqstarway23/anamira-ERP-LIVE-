@@ -69,7 +69,7 @@ supabase/tests/*.sql       behaviour and security tests (run against local Postg
 
 ## Setup (one time)
 
-1. In the Supabase SQL editor, run the migrations in `supabase/migrations` in order. They are already applied to `anamira-car-rental`.
+1. The Supabase project `anamira-car-rental` is linked to this repository through the Supabase GitHub integration, so every push to `main` applies any new file in `supabase/migrations`. Without the integration, run those files in order in the SQL editor.
 2. In Supabase **Authentication → URL Configuration**, set the Site URL to the live link above.
 3. Create your account with **Create account** on the live site, confirm the email, then make yourself the first admin in the SQL editor:
    ```sql
