@@ -106,7 +106,7 @@ function shell() {
   const demo = S.backend.mode === 'demo';
   mount(app, html`<div id="shell" class="shell">
     <aside class="side">
-      <a class="brand" href="#/dashboard">${icon('car')}<span>${S.settings?.company_name || 'Anamira'}<small>ERP · v2</small></span></a>
+      <a class="brand" href="#/dashboard"><img class="logo" src="assets/logo.png" alt="" width="46" height="46"><span>${S.settings?.company_name || 'Anamira'}<small>ERP · v2</small></span></a>
       <nav id="nav">${groups.map((g) => {
         const items = ROUTES.filter((r) => r.group === g && allowed(r));
         return items.length ? html`<p class="nav-group">${t(g)}</p>${items.map((r) => html`<a href="#/${r.id}" data-id="${r.id}">${icon(r.icon)}<span>${t(r.label)}</span></a>`)}` : '';
@@ -124,7 +124,7 @@ function shell() {
       ${demo ? html`<div class="demo-bar">${icon('sparkles')} <b>${t('Demo mode')}</b><span class="muted">Sample data, stored only in this browser.</span>
         <label>${t('View as')} <select data-ui="role">${['admin', 'manager', 'agent', 'accountant'].map((r) => html`<option value="${r}" ${r === S.role ? 'selected' : ''}>${t(r)}</option>`)}</select></label>
         <button class="btn sm ghost" data-ui="reset">${icon('refresh-cw')} Reset</button><button class="btn sm ghost" data-ui="out">${t('Exit demo')}</button></div>` : ''}
-      <header class="topbar"><button class="icon-btn" data-ui="menu" aria-label="Menu">${icon('menu')}</button><span class="brand-sm">${S.settings?.company_name}</span></header>
+      <header class="topbar"><button class="icon-btn" data-ui="menu" aria-label="Menu">${icon('menu')}</button><span class="brand-sm"><img class="logo" src="assets/logo.png" alt="" width="32" height="32">${S.settings?.company_name || 'Anamira'}</span></header>
       <main id="main" tabindex="-1"></main>
     </div></div>`);
   app.onclick = async (e) => {
@@ -132,7 +132,7 @@ function shell() {
     const a = b.dataset.ui;
     if (a === 'menu') $('#shell').classList.toggle('nav-open');
     if (a === 'theme') {
-      const dark = document.documentElement.dataset.theme === 'dark' || (!document.documentElement.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches);
+      const dark = document.documentElement.dataset.theme === 'dark';
       const th = dark ? 'light' : 'dark'; store.set('anamira.theme', th); applyTheme(th);
     }
     if (a === 'lang') { setLang(getLang() === 'ar' ? 'en' : 'ar'); shell(); route(); }

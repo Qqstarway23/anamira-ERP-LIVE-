@@ -175,7 +175,7 @@ function printContract(r) {
   const b = x.balances[r.id] || {};
   const el = $('#print');
   el.innerHTML = html`<div class="contract">
-    <header><div><h1>${s.company_name}</h1><p>${s.company_address}${s.company_phone ? ' · ' + s.company_phone : ''}</p>${s.trn ? html`<p>TRN ${s.trn}</p>` : ''}</div>
+    <header><img class="c-logo" src="assets/logo.png" alt="" width="70" height="70"><div class="c-co"><h1>${s.company_name}</h1><p>${s.company_address}${s.company_phone ? ' · ' + s.company_phone : ''}</p>${s.trn ? html`<p>TRN ${s.trn}</p>` : ''}</div>
       <div class="r"><h2>Rental Agreement · عقد إيجار</h2><p class="mono">${r.ref}</p><p>${fmtDate(new Date())}</p></div></header>
     <div class="cols">
       <section><h3>Hirer · المستأجر</h3><p><b>${c?.full_name}</b></p><p>${c?.phone}</p><p>ID ${c?.id_number} (${fmtDate(c?.id_expiry)})</p>

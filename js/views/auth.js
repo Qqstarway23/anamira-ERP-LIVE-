@@ -7,8 +7,8 @@ export function renderAuth(root, { backend, onDemo, onLang }) {
   let mode = 'in';
   const draw = (msg = '', kind = '') => {
     root.innerHTML = html`<div class="auth">
-      <aside class="auth-art"><div class="brand big">${icon('car')}<span>Anamira<small>Car Rental ERP</small></span></div>
-        <h1>Rent smarter.<br>Run the whole fleet from one screen.</h1>
+      <aside class="auth-art"><div class="brand big"><img class="logo" src="assets/logo.png" alt="Anamira Rent a Car" width="104" height="104"><span>Anamira<small>Rent a Car · ERP</small></span></div>
+        <h1>Rent smarter.<br><em>Run the whole fleet</em> from one screen.</h1>
         <ul><li>${icon('key-round')} Book → hand over → return in three clicks</li><li>${icon('shield-check')} No double bookings, enforced by the database</li>
         <li>${icon('siren')} Salik and fines matched to the right customer automatically</li><li>${icon('chart-column')} Live revenue, balances and utilisation</li></ul></aside>
       <main class="auth-box">
