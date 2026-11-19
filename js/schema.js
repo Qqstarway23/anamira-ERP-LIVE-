@@ -92,19 +92,21 @@ export const RESOURCES = {
 
   fines: {
     title: 'Fines & Salik', icon: 'siren', singular: 'fine',
-    search: ['reference', 'plate_number', 'location', (r, x) => x.customers[r.customer_id]?.full_name],
+    search: ['reference', 'plate_number', 'location', 'source', 'description', (r, x) => x.customers[r.customer_id]?.full_name],
     filters: { key: 'status', values: ['new', 'charged', 'company', 'unmatched', 'paid', 'disputed'] },
     fields: [
       { key: 'kind', label: 'Kind', type: 'select', req: true, def: 'salik', options: ['salik', 'traffic', 'parking', 'other'] },
+      { key: 'source', label: 'Authority', max: 60 },
       { key: 'reference', label: 'Reference', max: 60 },
       { key: 'plate_code', label: 'Plate code', max: 4 }, { key: 'plate_number', label: 'Plate number', req: true, max: 10 },
       { key: 'occurred_at', label: 'Occurred', type: 'datetime', req: true }, { key: 'location', label: 'Location', max: 120 },
+      { key: 'description', label: 'Description', max: 300 }, { key: 'black_points', label: 'Black points', type: 'int', max: 24, def: 0 },
       { key: 'amount', label: 'Amount', type: 'money', req: true }, { key: 'admin_fee', label: 'Admin fee', type: 'money' },
       { key: 'status', label: 'Status', type: 'select', req: true, def: 'new', options: ['new', 'charged', 'company', 'unmatched', 'paid', 'disputed'] },
     ],
     columns: [
       { label: 'Occurred', cell: (r) => fmtDateTime(r.occurred_at), key: 'occurred_at' },
-      { label: 'Kind', cell: (r) => html`<b>${t(r.kind)}</b><small class="muted block mono">${r.reference}</small>`, key: 'kind' },
+      { label: 'Kind', cell: (r) => html`<b>${t(r.kind)}</b>${r.source ? html` <small class="muted">${r.source}</small>` : ''}<small class="muted block mono">${r.reference}</small>${r.description || r.location ? html`<small class="muted block">${[r.description, r.location].filter(Boolean).join(' · ')}</small>` : ''}`, csv: (r) => [r.kind, r.source, r.reference, r.description, r.location].filter(Boolean).join(' | ') },
       { label: 'Plate', cell: (r) => plateTag(r), csv: plate },
       { label: 'Customer', cell: (r, x) => (r.customer_id ? html`${x.customers[r.customer_id]?.full_name}<small class="muted block mono">${x.rentals[r.rental_id]?.ref || ''}</small>` : '—'), csv: (r, x) => x.customers[r.customer_id]?.full_name },
       { label: 'Amount', cell: (r) => html`${money(r.amount)}${+r.admin_fee ? html`<small class="muted block">+ ${money(r.admin_fee)}</small>` : ''}`, cls: 'num', key: 'amount' },

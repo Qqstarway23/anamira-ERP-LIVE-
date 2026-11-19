@@ -38,6 +38,15 @@ const AR = {
   'Revenue by car': 'الإيرادات حسب السيارة', 'Monthly summary': 'الملخص الشهري', 'Month': 'الشهر', 'Rentals count': 'عدد الإيجارات',
   'Theme': 'المظهر', 'Language': 'اللغة', 'Board': 'لوحة', 'List': 'قائمة', 'Expires': 'ينتهي', 'Occurred': 'تاريخ الوقوع',
   'Who': 'المستخدم', 'Open': 'مفتوحة', 'Rental': 'الإيجار', 'Expenses ': 'المصروفات', 'What': 'العملية', 'When': 'الوقت', 'Read only': 'قراءة فقط', 'Forgot password?': 'نسيت كلمة المرور؟',
+  'Import statement': 'استيراد كشف', 'Statement type': 'نوع الكشف', 'Authority': 'الجهة', 'Import and match': 'استيراد ومطابقة',
+  'Detect from each row': 'تحديد تلقائي لكل سطر', 'Salik trips and Salik fines': 'رحلات ومخالفات سالك', 'Traffic fines (Police / RTA)': 'مخالفات مرورية (الشرطة / الهيئة)',
+  'Parking fines': 'مخالفات المواقف', 'File (.xlsx or .csv)': 'ملف (.xlsx أو .csv)', 'Download a blank template': 'تنزيل نموذج فارغ',
+  'Or paste rows from Excel (with the header row)': 'أو الصق الأسطر من Excel (مع سطر العناوين)', 'Columns': 'الأعمدة', 'ready': 'جاهز',
+  'will be skipped': 'سيتم تخطيها', 'Times are read as Dubai time.': 'الأوقات بتوقيت دبي.', 'Details': 'التفاصيل', 'Black points': 'النقاط السوداء',
+  'black points': 'نقاط سوداء', 'more rows': 'أسطر أخرى', 'added': 'أُضيفت', 'charged to customers': 'على العملاء', 'already in the system': 'موجودة مسبقاً',
+  'No plate number': 'لا يوجد رقم لوحة', 'Date not understood': 'تاريخ غير مفهوم', 'No amount': 'لا يوجد مبلغ', 'No rows found.': 'لم يتم العثور على أسطر.',
+  'Pasted rows': 'أسطر ملصقة', 'Plate (code and number together)': 'اللوحة (الرمز والرقم معاً)', 'Time': 'الوقت',
+  'Taken from the file when it has a column for it': 'تؤخذ من الملف إن وُجد عمود لها',
 };
 let lang = 'en';
 try { lang = localStorage.getItem('anamira.lang') || 'en'; } catch { /* storage blocked */ }
