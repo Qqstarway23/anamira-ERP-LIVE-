@@ -185,7 +185,7 @@ export function createDemoBackend() {
     customers: { kind: 'individual', phone: '', email: '', nationality: '', id_number: '', license_number: '', address: '', blacklisted: false, notes: '' },
     rentals: { status: 'booked', extras: 0, discount: 0, vat_rate: 5, deposit: 0, fuel_out: 'full', notes: '', returned_at: null, odometer_in: null, fuel_in: null },
     payments: { kind: 'payment', method: 'cash', note: '' },
-    fines: { kind: 'salik', reference: '', plate_code: '', location: '', admin_fee: 0, status: 'new', vehicle_id: null, rental_id: null, customer_id: null },
+    fines: { kind: 'salik', source: '', reference: '', plate_code: '', location: '', description: '', black_points: 0, admin_fee: 0, status: 'new', vehicle_id: null, rental_id: null, customer_id: null },
     maintenance: { kind: 'service', description: '', vendor: '', cost: 0, status: 'open', closed_on: null },
     expenses: { category: 'other', description: '', vat: 0, method: 'cash', vehicle_id: null },
   };
@@ -258,8 +258,38 @@ export function createDemoBackend() {
       if (table === 'rentals' && row.status === 'active') { const v = find('vehicles', row.vehicle_id); if (v?.status === 'rented') v.status = 'available'; }
       db[table] = db[table].filter((r) => r.id !== id); log(table, row, 'delete'); save(); listener(table);
     },
-    async rpc(name) {
+    async rpc(name, args) {
+      if (name === 'import_fines') return importFines(args?.rows || []);
       if (name !== 'match_fines') throw new Error('Unknown action');
+      return matchFines();
+    },
+    subscribe(cb) { listener = cb; },
+  };
+
+  // Same rules as public.import_fines(): skip rows already present, insert the rest, then match.
+  async function importFines(rows) {
+    need('fines', 'write');
+    const norm = (p) => String(p || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const stamp = new Date().toISOString(); const out = { received: rows.length, inserted: 0, duplicates: 0, invalid: 0 };
+    for (const x of rows) {
+      const f = { ...DEFAULTS.fines, kind: x.kind || 'salik', source: String(x.source || '').slice(0, 60), reference: String(x.reference || '').trim().slice(0, 60),
+        plate_code: norm(x.plate_code).slice(0, 4), plate_number: norm(x.plate_number).slice(0, 10), occurred_at: x.occurred_at,
+        location: String(x.location || '').slice(0, 120), description: String(x.description || '').slice(0, 300),
+        amount: round2(x.amount), black_points: Math.max(0, Math.min(24, +x.black_points || 0)) };
+      if (!f.plate_number || !f.occurred_at || isNaN(new Date(f.occurred_at)) || !(+x.amount >= 0)) { out.invalid++; continue; }
+      const dup = db.fines.some((g) => g.kind === f.kind && (f.reference ? g.reference === f.reference
+        : g.plate_number === f.plate_number && +new Date(g.occurred_at) === +new Date(f.occurred_at) && +g.amount === f.amount));
+      if (dup) { out.duplicates++; continue; }
+      Object.assign(f, { id: uuid(), created_at: stamp, imported_at: stamp });
+      db.fines.unshift(f); out.inserted++;
+    }
+    log('fines', { id: stamp, description: 'Statement import' }, 'insert', ` · ${out.inserted} rows`);
+    await matchFines();
+    for (const k of ['charged', 'company', 'unmatched']) out[k] = db.fines.filter((g) => g.imported_at === stamp && g.status === k).length;
+    return out;
+  }
+
+  async function matchFines() {
       need('fines', 'write');
       const s = db.settings; let n = 0;
       const norm = (p) => String(p || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -278,7 +308,5 @@ export function createDemoBackend() {
         n++;
       }
       save(); listener('fines'); return n;
-    },
-    subscribe(cb) { listener = cb; },
-  };
+  }
 }
