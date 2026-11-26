@@ -5,7 +5,7 @@ import { openModal, closeModal, toast, badge, plateTag } from '../ui.js';
 import { S, reload } from '../store.js';
 import { FIELDS, readFile, parseText, detect, toFines, TEMPLATE } from '../importer.js';
 
-const KINDS = [['auto', 'Detect from each row'], ['salik', 'Salik trips and Salik fines'], ['traffic', 'Traffic fines (Police / RTA)'], ['parking', 'Parking fines']];
+const KINDS = [['auto', 'Detect from each row'], ['salik', 'Salik trips and Salik fines'], ['darb', 'Darb (Abu Dhabi tolls)'], ['mall_parking', 'Mall parking (Salik e-parking)'], ['traffic', 'Traffic fines (Police / RTA)'], ['parking', 'Parking fines']];
 const SOURCES = ['Salik', 'Dubai Police', 'RTA', 'Abu Dhabi Police', 'Sharjah Police', 'Ajman Police', 'Umm Al Quwain Police', 'Ras Al Khaimah Police', 'Fujairah Police'];
 const CHUNK = 1000;
 

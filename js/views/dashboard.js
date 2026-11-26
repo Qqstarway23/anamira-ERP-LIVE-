@@ -1,41 +1,12 @@
 // Dashboard: today at a glance, what needs attention, and a 14-day fleet timeline.
-import { html, icon, money, fmtDateTime, fmtDate, plate, carName, daysUntil, sum, num, esc, raw } from '../util.js';
+import { html, icon, money, carName, sum, num } from '../util.js';
 import { t } from '../i18n.js';
 import { badge, plateTag, empty } from '../ui.js';
 import { lookups } from '../schema.js';
 import { S } from '../store.js';
+import { collectAlerts, alertList } from './alerts.js';
 
 const sameDay = (a, b) => new Date(a).toDateString() === new Date(b).toDateString();
-
-function attention(x) {
-  const items = [];
-  const now = new Date();
-  for (const r of S.data.rentals) {
-    const c = x.customers[r.customer_id]?.full_name; const v = plate(x.vehicles[r.vehicle_id]);
-    if (r.status === 'active' && new Date(r.end_at) < now) items.push({ lvl: 3, ic: 'clock', text: `${r.ref} · ${c} · ${v}`, tag: t('Overdue'), href: `#/rentals?open=${r.id}` });
-    else if (r.status === 'active' && sameDay(r.end_at, now)) items.push({ lvl: 2, ic: 'undo-2', text: `${r.ref} · ${c} · ${v} · ${fmtDateTime(r.end_at)}`, tag: t('Due back today'), href: `#/rentals?open=${r.id}` });
-    if (r.status === 'booked' && new Date(r.start_at) <= new Date(now.getTime() + 86400000)) items.push({ lvl: new Date(r.start_at) < now ? 3 : 2, ic: 'key-round', text: `${r.ref} · ${c} · ${v} · ${fmtDateTime(r.start_at)}`, tag: t('Pick-ups today'), href: `#/rentals?open=${r.id}` });
-    if (r.status === 'returned' && num(x.balances[r.id]?.balance) > 0.009) items.push({ lvl: 2, ic: 'circle-dollar-sign', text: `${r.ref} · ${c} · ${money(x.balances[r.id].balance)}`, tag: t('Outstanding'), href: `#/rentals?open=${r.id}` });
-  }
-  for (const v of S.data.vehicles) {
-    if (v.status === 'retired') continue;
-    for (const [k, label] of [['insurance_expiry', 'Insurance expiry'], ['registration_expiry', 'Registration expiry']]) {
-      const d = daysUntil(v[k]);
-      if (d != null && d <= 30) items.push({ lvl: d < 0 ? 3 : d <= 7 ? 2 : 1, ic: 'shield-check', text: `${plate(v)} · ${carName(v)} · ${fmtDate(v[k])}`, tag: t(label), href: '#/fleet' });
-    }
-  }
-  const activeCustomers = new Set(S.data.rentals.filter((r) => ['booked', 'active'].includes(r.status)).map((r) => r.customer_id));
-  for (const c of S.data.customers) {
-    const d = daysUntil(c.license_expiry);
-    if (activeCustomers.has(c.id) && d != null && d <= 30) items.push({ lvl: d < 0 ? 3 : 2, ic: 'file-text', text: `${c.full_name} · ${fmtDate(c.license_expiry)}`, tag: t('Licence expiry'), href: '#/customers' });
-  }
-  const unmatched = S.data.fines.filter((f) => ['new', 'unmatched'].includes(f.status)).length;
-  if (unmatched) items.push({ lvl: 1, ic: 'siren', text: `${unmatched} ${t('Fines & Salik')}`, tag: t('new'), href: '#/fines' });
-  for (const m of S.data.maintenance.filter((m) => m.status === 'open')) {
-    items.push({ lvl: 1, ic: 'wrench', text: `${plate(x.vehicles[m.vehicle_id])} · ${t(m.kind)} · ${m.description}`, tag: t('Maintenance'), href: '#/maintenance' });
-  }
-  return items.sort((a, b) => b.lvl - a.lvl);
-}
 
 function timeline(x) {
   const start = new Date(); start.setHours(0, 0, 0, 0);
@@ -69,7 +40,7 @@ export function render(root) {
   const monthRentals = S.data.rentals.filter((r) => r.status !== 'cancelled' && new Date(r.start_at) >= m0);
   const collected = sum(S.data.payments.filter((p) => new Date(p.paid_at) >= m0), (p) => (p.kind === 'payment' ? p.amount : p.kind === 'refund' ? -p.amount : 0));
   const outstanding = sum(S.data.rentals.filter((r) => ['active', 'returned'].includes(r.status)), (r) => Math.max(0, num(x.balances[r.id]?.balance)));
-  const items = attention(x);
+  const items = collectAlerts();
   const byStatus = (s) => fleet.filter((v) => v.status === s).length;
   const hello = S.me?.full_name ? `${S.me.full_name.split(' ')[0]}` : '';
   root.innerHTML = html`
@@ -83,10 +54,13 @@ export function render(root) {
       <div class="kpi"><span>${icon('chart-column')} ${t('Revenue')} · ${t('This month')}</span><b>${money(sum(monthRentals, 'total'))}</b><em>${monthRentals.length} ${t('Rentals')}</em></div>
       <div class="kpi"><span>${icon('coins')} ${t('Collected')} · ${t('This month')}</span><b>${money(collected)}</b><em class="${outstanding > 0 ? 'neg' : ''}">${t('Outstanding')}: ${money(outstanding)}</em></div>
     </div>
-    <div class="fleet-strip">${['available', 'rented', 'maintenance'].map((s) => html`<a href="#/fleet" class="pill ${s}"><b>${byStatus(s)}</b> ${t(s)}</a>`)}</div>
+    <div class="fleet-strip">${['available', 'rented', 'nrm', 'custody', 'maintenance'].filter((s) => s !== 'custody' || byStatus(s)).map((s) => html`<a href="#/fleet" class="pill ${s}"><b>${byStatus(s)}</b> ${t(s === 'nrm' ? 'Staff use (NRM)' : s)}</a>`)}
+      ${S.can('inspections', 'write') ? html`<a href="#/checkcard" class="pill ops">${icon('clipboard-check')} ${t('Check-out / check-in')}</a>` : ''}
+      <a href="#/checkcard" class="pill ops"><b>${S.data.inspections.filter((i) => sameDay(i.at, new Date())).length}</b> ${t('check cards today')}</a>
+      ${S.can('invoices', 'read') ? html`<a href="#/invoices" class="pill ops"><b>${S.data.invoices.filter((i) => i.status === 'open').length}</b> ${t('open invoices')}</a>` : ''}</div>
     <div class="dash-grid">
       <section class="card"><header><h2>${icon('triangle-alert')} ${t('Needs attention')}</h2><span class="badge ${items.some((i) => i.lvl === 3) ? 'red' : 'gray'}">${items.length}</span></header>
-        ${items.length ? html`<ul class="alerts">${items.slice(0, 12).map((i) => html`<li class="lvl${i.lvl}"><a href="${i.href}">${icon(i.ic)}<span>${i.text}</span><em>${i.tag}</em></a></li>`)}</ul>` : empty('Nothing here yet', 'circle-check')}
+        ${alertList(items.slice(0, 12))}${items.length > 12 ? html`<p><a href="#/alerts">${t('See all alerts')} (${items.length})</a></p>` : ''}
       </section>
       <section class="card span2"><header><h2>${icon('calendar')} ${t('Next 14 days')}</h2>
         <div class="legend"><i class="booked"></i>${t('booked')} <i class="active"></i>${t('active')} <i class="overdue"></i>${t('Overdue')} <i class="maint"></i>${t('maintenance')}</div></header>

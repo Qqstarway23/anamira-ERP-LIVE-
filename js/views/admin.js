@@ -1,8 +1,14 @@
 // Team (user access), company settings and the activity log.
 import { html, icon, fmtDateTime, $ } from '../util.js';
 import { t } from '../i18n.js';
-import { table, badge, wireActions, formModal, confirmBox, toast, field, readForm } from '../ui.js';
+import { table, badge, wireActions, formModal, toast, field, readForm } from '../ui.js';
 import { S, loadAll } from '../store.js';
+import { ROLES, ACCESS_TABLES, can } from '../rules.js';
+
+const LABELS = { vehicles: 'Fleet', customers: 'Customers', rentals: 'Rentals', payments: 'Payments', fines: 'Fines & Salik', maintenance: 'Garage & maintenance',
+  expenses: 'Expenses', settings: 'Settings', profiles: 'Team', activity: 'Activity', branches: 'Branches', departments: 'Departments', masters: 'Masters',
+  tariff_groups: 'Tariff groups', tariff_cards: 'Tariff cards', employees: 'Employees', suppliers: 'Suppliers', movements: 'Staff & custody movements',
+  inspections: 'Check cards', damages: 'Damages', invoices: 'Invoices', bills: 'Supplier bills', vouchers: 'Payment & receipt vouchers' };
 
 // ── Team ─────────────────────────────────────────────────────────────────────
 export function mountTeam(root) {
@@ -16,9 +22,15 @@ export function mountTeam(root) {
       <div class="callout">${icon('info')}<div><b>How access works</b><p>New people sign up on the login page with their own email. They see nothing until an admin activates them here and picks a role. Every rule is enforced by the database, not just this screen.</p></div></div>
       <div class="roles">${[['admin', 'Everything, including team and settings'], ['manager', 'Fleet, rentals, fines, reports, expenses'], ['agent', 'Customers, rentals, payments, maintenance'], ['accountant', 'Payments, fines, expenses, reports']]
         .map(([r, d]) => html`<div>${badge(r)}<small class="muted">${d}</small></div>`)}</div>
+      <details class="card guide"><summary>${icon('lock')} ${t('Access matrix: what each role can do')}</summary>
+        <div class="table-wrap"><table class="tbl matrix"><thead><tr><th>${t('Area')}</th>${ROLES.map((r) => html`<th>${t(r)}</th>`)}</tr></thead>
+        <tbody>${ACCESS_TABLES.map((tb) => html`<tr><td>${t(LABELS[tb] || tb)}</td>${ROLES.map((r) => html`<td>${can(r, tb, 'remove') ? html`<b class="pos">${t('Full')}</b>` : can(r, tb, 'write') ? t('Add & edit') : can(r, tb, 'read') ? html`<span class="muted">${t('View')}</span>` : html`<span class="neg">—</span>`}</td>`)}</tr>`)}</tbody></table></div>
+        <p class="muted small">${t('These rules are enforced by the database for every request, not only by this screen.')}</p></details>
       ${table(profiles, [
         { label: 'Full name', cell: (p) => html`<b>${p.full_name}</b>${p.id === S.me?.id ? html` <small class="muted">(you)</small>` : ''}<small class="muted block">${p.email}</small>` },
-        { label: 'Role', cell: (p) => badge(p.role) }, { label: 'Status', cell: (p) => (p.active ? badge('available', t('Active')) : badge('new', t('Waiting for approval'))) },
+        { label: 'Role', cell: (p) => badge(p.role) },
+        { label: 'Branch', cell: (p) => html`${S.data.branches.find((b) => b.id === p.branch_id)?.name || '—'}<small class="muted block">${S.data.departments.find((d) => d.id === p.department_id)?.name || ''}</small>` },
+        { label: 'Status', cell: (p) => (p.active ? badge('available', t('Active')) : badge('new', t('Waiting for approval'))) },
         { label: 'Date', cell: (p) => fmtDateTime(p.created_at) },
       ], { actions: admin ? (p) => html`<button class="btn sm ghost" data-act="edit" data-id="${p.id}">${icon('pencil')} ${t('Edit')}</button>
           ${!p.active ? html`<button class="btn sm primary" data-act="activate" data-id="${p.id}">${icon('check')} ${t('Activate')}</button>` : ''}` : null })}`.toString();
@@ -29,7 +41,10 @@ export function mountTeam(root) {
       const p = profiles.find((x) => x.id === id);
       formModal({
         title: `${t('Edit')} · ${p.email}`, wide: false, row: p,
+        data: S.data,
         fields: [{ key: 'full_name', label: 'Full name', req: true, max: 80 }, { key: 'role', label: 'Role', type: 'select', req: true, options: ['admin', 'manager', 'agent', 'accountant'] },
+          { key: 'branch_id', label: 'Branch', type: 'ref', ref: 'branches', refLabel: (b) => b.name },
+          { key: 'department_id', label: 'Department', type: 'ref', ref: 'departments', refLabel: (d) => d.name },
           { key: 'active', label: 'Active', type: 'checkbox' }],
         onSubmit: async (v) => { await S.backend.update('profiles', id, v); toast(t('Saved')); await load(); },
       });
@@ -46,6 +61,12 @@ const SETTINGS_FIELDS = [
   { key: 'currency', label: 'Currency', type: 'select', req: true, options: ['AED', 'SAR', 'QAR', 'OMR', 'KWD', 'BHD', 'USD', 'EUR'] },
   { key: 'vat_rate', label: 'VAT %', type: 'number', req: true, max: 100 }, { key: 'salik_fee', label: 'Salik admin fee', type: 'money', req: true },
   { key: 'fine_fee_pct', label: 'Fine admin fee %', type: 'number', req: true, max: 100 },
+  { key: 'company_email', label: 'Email', type: 'email', max: 120 }, { key: 'company_website', label: 'Website', max: 120 },
+  { key: 'trade_license', label: 'Trade licence no.', max: 40 }, { key: 'default_deposit', label: 'Default deposit', type: 'money' },
+  { key: 'alert_days', label: 'Warn about expiries (days before)', type: 'int', min: 1, max: 365, req: true },
+  { key: 'service_interval_km', label: 'Service every (km)', type: 'int', min: 500, max: 100000, req: true },
+  { key: 'invoice_fines_on_close', label: 'Invoice fines and tolls automatically when a car is returned (and every night)', type: 'checkbox', span: true },
+  { key: 'fines_invoice_from', label: 'Only invoice fines from this date', type: 'date', help: 'Older fines are never invoiced automatically.' },
 ];
 export function mountSettings(root) {
   const render = () => {
@@ -82,8 +103,8 @@ export function mountActivity(root) {
     root.innerHTML = html`<div class="page-head"><div><h1>${icon('history')} ${t('Activity')}</h1><p class="muted">${rows.length}</p></div></div>
       ${table(rows, [
         { label: 'When', cell: (r) => fmtDateTime(r.at) }, { label: 'Who', cell: (r) => r.actor_name || '—' },
-        { label: 'What', cell: (r) => html`${badge(r.action === 'delete' ? 'refund' : r.action === 'insert' ? 'payment' : 'booked', r.action)} <b>${t(r.entity === 'vehicles' ? 'Fleet' : r.entity[0].toUpperCase() + r.entity.slice(1))}</b>` },
-        { label: 'Description', cell: (r) => r.summary },
+        { label: 'What', cell: (r) => html`${badge(r.action === 'delete' ? 'refund' : r.action === 'insert' ? 'payment' : 'booked', r.action)} <b>${t(LABELS[r.entity] || r.entity)}</b>` },
+        { label: 'Description', cell: (r) => html`${r.summary}${r.changes ? html`<details class="chg"><summary>${t('Changes')}</summary><small>${r.changes}</small></details>` : ''}` },
       ])}`.toString();
   })();
   return () => {};

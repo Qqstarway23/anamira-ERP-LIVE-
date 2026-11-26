@@ -224,6 +224,8 @@ export function parseAmount(v) {
 export function guessKind(defaultKind, source, description) {
   const s = `${source || ''} ${description || ''}`.toLowerCase();
   if (defaultKind !== 'auto') return defaultKind;
+  if (/darb|درب|abu dhabi toll|itc/.test(s)) return 'darb';
+  if (/mall|e-?parking|dubai mall|mall of the emirates|مول/.test(s)) return 'mall_parking';
   if (/salik|سالك|toll/.test(s)) return 'salik';
   if (/parking|mawaqif|مواقف/.test(s)) return 'parking';
   return 'traffic';

@@ -267,3 +267,89 @@ h3.sub { margin: 1.3rem 0 .6rem; } .note { background: var(--gold-soft); padding
 .kpi:nth-child(4n+2) { --k: var(--accent); } .kpi:nth-child(4n+3) { --k: var(--coral); } .kpi:nth-child(4n+4) { --k: var(--gold); }
 .kpi span .ic { color: var(--k, var(--brand)); }
 .brand-sm { display: inline-flex; align-items: center; gap: .5rem; font-weight: 800; } .brand-sm .logo { width: 2rem; height: 2rem; box-shadow: 0 0 0 2px var(--brand-soft); }
+
+/* ── v2.1: CRS modules ───────────────────────────────────────────────────── */
+.toolbar.sub { margin-top: -.4rem; }
+.mini-select { display: inline-flex; align-items: center; gap: .4rem; font-size: .8rem; font-weight: 600; color: var(--muted); }
+.mini-select select, .mini-select input[type=date] { font: 500 .85rem var(--font); padding: .35rem .5rem; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--ink); }
+.kpis.sm { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); } .kpis.sm .kpi b { font-size: 1.15rem; }
+.tabs { display: flex; flex-wrap: wrap; gap: .3rem; border-bottom: 1px solid var(--line); margin: 0 0 1rem; }
+.tabs button { border: 0; background: none; padding: .55rem .85rem; font: 600 .85rem var(--font); color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; display: inline-flex; gap: .4rem; align-items: center; }
+.tabs button.on { color: var(--brand); border-bottom-color: var(--brand); }
+.quote .wide { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; align-items: center; }
+.quote .warn { color: var(--red); font-weight: 700; gap: .4rem; justify-content: flex-start; }
+.guide { padding: .8rem 1rem; margin-bottom: 1rem; } .guide summary { cursor: pointer; font-weight: 700; display: flex; gap: .45rem; align-items: center; }
+.sipp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-top: .8rem; }
+.sipp-grid h4 { margin: 0 0 .3rem; font-size: .82rem; } .sipp-grid dl { display: grid; grid-template-columns: 1.6rem 1fr; gap: .1rem .4rem; margin: 0; font-size: .78rem; }
+.sipp-grid dt { font-family: var(--mono); font-weight: 700; color: var(--brand); } .sipp-grid dd { margin: 0; color: var(--ink-2); }
+.matrix td, .matrix th { text-align: center; } .matrix td:first-child, .matrix th:first-child { text-align: start; }
+details.chg summary, details.events summary { cursor: pointer; color: var(--brand); font-size: .78rem; font-weight: 600; }
+details.events { margin-top: 1rem; } details.events summary { font-size: .85rem; display: flex; gap: .4rem; align-items: center; }
+.aging { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: .5rem; padding: .8rem; background: var(--surface-2); border-radius: var(--radius-sm); margin: .6rem 0 1rem; }
+.aging div { display: flex; flex-direction: column; } .aging span { font-size: .7rem; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: .04em; }
+.aging b { font-variant-numeric: tabular-nums; } .aging .big b { color: var(--brand); font-size: 1.15rem; }
+.flags { display: flex; flex-wrap: wrap; gap: .25rem; }
+.car-card.nrm, .car-card.custody { border-top-color: var(--violet); }
+.pill.nrm, .pill.custody { background: var(--violet-soft); color: var(--violet); } .pill.ops { background: var(--surface-2); color: var(--ink-2); display: inline-flex; gap: .35rem; align-items: center; }
+.row-gap { display: flex; gap: .5rem; } .row-gap select { flex: 1; }
+.quick { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1rem; }
+.qr-box { display: flex; flex-direction: column; align-items: center; gap: .4rem; } .qr-box svg { width: 130px; height: 130px; background: #fff; border-radius: 8px; }
+
+/* Check-out / check-in wizard */
+.steps { list-style: none; display: flex; gap: .3rem; padding: 0; margin: 0 0 1rem; overflow-x: auto; }
+.steps li { flex: 1; min-width: 92px; display: flex; gap: .45rem; align-items: center; padding: .5rem .6rem; border-radius: 10px; background: var(--surface-2); color: var(--muted); font-size: .8rem; font-weight: 600; }
+.steps li b { width: 1.5rem; height: 1.5rem; border-radius: 50%; display: grid; place-items: center; background: var(--line-2); color: var(--surface); font-size: .75rem; flex: none; }
+.steps li.on { background: var(--brand-soft); color: var(--brand); } .steps li.on b { background: var(--brand); }
+.steps li.done b { background: var(--green); }
+.wiz { padding: 1.1rem; } .wiz .seg { flex-wrap: wrap; } .seg.fuel button { min-width: 3.2rem; }
+.car-mini { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; padding: .7rem; background: var(--surface-2); border-radius: 10px; }
+.checklist { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: .35rem .8rem; }
+.checklist label { display: flex; gap: .45rem; align-items: center; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--ink); font-size: .9rem; padding: .3rem 0; }
+.checklist input { width: 1.15rem; height: 1.15rem; accent-color: var(--brand); }
+.diagram-wrap { display: flex; justify-content: center; margin: .6rem 0; }
+.diagram { width: 100%; max-width: 320px; color: var(--ink-2); background: var(--surface-2); border-radius: 14px; touch-action: manipulation; }
+.diagram.live { cursor: crosshair; } .diagram .mark.fixed circle { opacity: .35; }
+.mini-diagrams, .print-diagrams { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; max-width: 380px; } .mini-diagrams .diagram { max-width: 180px; }
+.dmg-legend { display: flex; flex-wrap: wrap; gap: .3rem .8rem; justify-content: center; font-size: .75rem; color: var(--muted); }
+.dmg-legend i { display: inline-block; width: .7rem; height: .7rem; border-radius: 50%; margin-inline-end: .3rem; vertical-align: -.05em; }
+.dmg-list { padding-inline-start: 0; list-style: none; margin: .6rem 0; } .dmg-list li { display: flex; gap: .4rem; align-items: center; padding: .3rem 0; border-bottom: 1px solid var(--line); font-size: .88rem; }
+.dmg-list li b { width: 1.4rem; height: 1.4rem; border-radius: 50%; background: var(--ink); color: var(--bg); display: grid; place-items: center; font-size: .72rem; flex: none; } .dmg-list li button { margin-inline-start: auto; }
+.drop { display: flex; gap: .6rem; align-items: center; justify-content: center; padding: 1.6rem; border: 2px dashed var(--line-2); border-radius: 14px; cursor: pointer; font-weight: 700; color: var(--brand); background: var(--surface-2); }
+.thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: .5rem; margin: .8rem 0; }
+.thumbs figure { margin: 0; position: relative; } .thumbs img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; display: block; }
+.thumbs figure .icon-btn { position: absolute; top: 4px; inset-inline-end: 4px; background: var(--surface); }
+canvas.sig { width: 100%; height: 150px; border: 1px solid var(--line-2); border-radius: 10px; background: #fff; touch-action: none; display: block; }
+.scan-video { width: 100%; max-height: 50vh; border-radius: 12px; background: #000; object-fit: cover; }
+ul.cl { list-style: none; padding: 0; margin: 0; columns: 2; font-size: .85rem; } ul.cl li { break-inside: avoid; }
+
+/* Report hub */
+.report-layout { display: grid; grid-template-columns: 230px 1fr; gap: 1rem; align-items: start; }
+.report-nav { display: flex; flex-direction: column; gap: .15rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: .4rem; position: sticky; top: 1rem; }
+.report-nav button { border: 0; background: none; text-align: start; padding: .5rem .6rem; border-radius: 8px; font: 600 .84rem var(--font); color: var(--ink-2); cursor: pointer; display: flex; gap: .45rem; align-items: center; }
+.report-nav button.on { background: var(--brand-soft); color: var(--brand); } .report-nav button:hover:not(.on) { background: var(--surface-2); }
+.report-body { min-width: 0; }
+.grid-report .tbl td.gc, .grid-report .tbl th.gc { padding: .2rem .1rem; text-align: center; font-size: .7rem; min-width: 1.5rem; }
+.gs { display: inline-block; width: 1.35rem; line-height: 1.35rem; border-radius: 4px; font-weight: 700; font-size: .68rem; }
+.gs-R { background: var(--blue-soft); color: var(--blue); } .gs-B { background: var(--amber-soft); color: var(--amber); } .gs-N, .gs-C { background: var(--violet-soft); color: var(--violet); }
+.gs-M { background: var(--orange-soft); color: var(--orange); } .gs-A { background: var(--green-soft); color: var(--green); } .gs-X { background: var(--gray-soft); color: var(--muted); }
+
+@media (max-width: 860px) {
+  .report-layout { grid-template-columns: 1fr; } .report-nav { position: static; flex-direction: row; overflow-x: auto; } .report-nav button { white-space: nowrap; }
+  .steps li span { display: none; } .steps li { min-width: 0; justify-content: center; }
+  .mini-diagrams { grid-template-columns: 1fr 1fr; } ul.cl { columns: 1; }
+  .wiz { padding: .8rem; } .wiz .form-actions { position: sticky; bottom: 0; background: var(--surface); padding: .6rem 0; margin: 0; }
+}
+
+@media print {
+  .contract .void-stamp { font-size: 40pt; color: #c00; border: 4px solid #c00; display: inline-block; padding: 0 12pt; transform: rotate(-8deg); }
+  .contract table.totals { width: 45%; margin-inline-start: auto; } .contract .words { font-style: italic; margin: 6pt 0 10pt; }
+  .contract .sign.three div { width: 28%; } .contract .num { text-align: right; }
+  .contract .tbl { width: 100%; border-collapse: collapse; font-size: 9pt; } .contract .tbl th, .contract .tbl td { border: 1px solid #999; padding: 3pt 5pt; }
+  .contract .table-wrap { overflow: visible; } .contract .icon-btn, .contract button { display: none; } .contract .badge { border: 0; padding: 0; background: none; color: #000; }
+  .contract.landscape { font-size: 8.5pt; } .contract .gs { width: auto; }
+  .qr-labels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10pt; } .qr-label { border: 1px dashed #999; padding: 6pt; text-align: center; break-inside: avoid; }
+  .qr-label svg { width: 100%; height: auto; } .qr-label b { display: block; font-size: 13pt; } .qr-label small { font-size: 8pt; }
+  .print-diagrams { grid-template-columns: 1fr 1fr; } .print-diagrams .diagram { background: none; color: #000; width: 100%; }
+  .print-photos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4pt; margin: 8pt 0; } .print-photos img { width: 100%; height: 90pt; object-fit: cover; }
+  .contract .sig-img { display: block; max-height: 50pt; max-width: 100%; margin-bottom: 2pt; } .contract ul.cl { columns: 2; font-size: 9pt; }
+}

@@ -210,4 +210,21 @@ do $$ begin
   delete from public.inspections where ref = (select min(ref) from public.inspections);
 end $$;
 reset role;
+-- 7. nightly job follows the auto-invoice switch; a car handed over early can still be replaced
+do $$ declare cid uuid; rid uuid; n int; begin
+  update public.settings set invoice_fines_on_close = false;
+  insert into public.customers(full_name) values ('Nightly Off') returning id into cid;
+  insert into public.rentals(customer_id, vehicle_id, start_at, end_at, daily_rate, status)
+    values (cid, 'a0000000-0000-4000-8000-000000000007', '2027-01-10 10:00+04', '2027-01-12 10:00+04', 100, 'active') returning id into rid;
+  insert into public.fines(kind, reference, plate_code, plate_number, occurred_at, amount) values ('salik','NIGHT1','Q','83931','2027-01-11 10:00+04',4);
+  n := (private.daily_fines_job()->>'invoices')::int;
+  if n <> 0 or exists (select 1 from public.invoices where rental_id = rid) then raise exception 'FAIL nightly job ignored the switch'; end if;
+  update public.settings set invoice_fines_on_close = true;
+  n := (private.daily_fines_job()->>'invoices')::int;
+  if n < 1 or not exists (select 1 from public.invoices where rental_id = rid) then raise exception 'FAIL nightly job did not invoice'; end if;
+  -- replaced 2 hours before the booked start (car handed over early)
+  perform public.replace_vehicle(rid, (select id from public.vehicles where status = 'available' order by plate_number limit 1),
+    (select odometer_out from public.rentals where id = rid), 'full', null, 'full', 'early swap', timestamptz '2027-01-10 08:00+04');
+  if (select count(*) from public.vehicle_replacements where rental_id = rid) <> 1 then raise exception 'FAIL early replacement'; end if;
+end $$;
 select 'CRS TESTS PASSED' as result;

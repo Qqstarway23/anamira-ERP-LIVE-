@@ -400,7 +400,7 @@ begin
   if p_old_fuel not in ('empty','1/4','1/2','3/4','full') or coalesce(p_new_fuel, 'full') not in ('empty','1/4','1/2','3/4','full') then
     raise exception 'Pick a fuel level';
   end if;
-  if p_at is null or p_at < r.start_at or p_at > greatest(r.end_at, now()) + interval '1 day' then
+  if p_at is null or p_at < r.start_at - interval '1 day' or p_at > greatest(r.end_at, now()) + interval '1 day' then
     raise exception 'The replacement time must be within the rental';
   end if;
 
@@ -850,7 +850,12 @@ language plpgsql security definer set search_path = '' as $$
 declare m int; i int;
 begin
   m := private.match_fines_core();
-  i := private.invoice_pending_fines(null);
+  -- Automatic invoicing follows the same switch as invoicing on return (Settings).
+  if coalesce((select invoice_fines_on_close from public.settings limit 1), true) then
+    i := private.invoice_pending_fines(null);
+  else
+    i := 0;
+  end if;
   return jsonb_build_object('matched', m, 'invoices', i);
 end $$;
 
