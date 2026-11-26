@@ -15,7 +15,7 @@ Press **Try the demo** on the login page to look around with sample data. The de
 | Customers | ID, licence and blacklist status |
 | Maintenance | Jobs per car. Opening a job takes the car out of service, and closing it brings the car back |
 | Payments | Payments, refunds, deposits and deposit returns, each linked to a rental |
-| Fines & Salik | Enter fines by plate and time, then **Match to rentals** assigns each one to the customer who had the car, with an admin fee |
+| Fines & Salik | **Import statement** reads the Salik, Dubai Police, RTA or other emirates' export (Excel .xlsx, CSV, or rows pasted from Excel), skips rows already imported, and links each new row to the rental and customer that had the car at that time, with an admin fee. Rows can also be added by hand and linked with **Match to rentals** |
 | Expenses | Company costs by category |
 | Reports | 6-month summary and revenue per car, with CSV export |
 | Team | Approve new users and set their roles |
@@ -58,6 +58,7 @@ index.html                 app shell with a strict Content-Security-Policy
 assets/app.css             design system (light/dark, RTL, print)
 assets/vendor/             supabase-js, vendored so no third-party script CDN is needed
 js/app.js                  boot, shell, router
+js/importer.js             reads fines/Salik statements (CSV, .xlsx, pasted rows) and detects the columns
 js/schema.js               one definition per business object (fields + columns)
 js/rules.js                pricing and permission rules (mirrors the database)
 js/backend-live.js         Supabase backend
@@ -83,6 +84,7 @@ supabase/tests/*.sql       behaviour and security tests (run against local Postg
 psql -d <empty local db> -f supabase/tests/00_supabase_shim.sql
 for f in supabase/migrations/*.sql; do psql -d <db> -v ON_ERROR_STOP=1 -f $f; done
 psql -d <db> -f supabase/tests/01_behaviour.sql   # prints ALL TESTS PASSED
+psql -d <db> -f supabase/tests/02_fines_import.sql   # prints IMPORT TESTS PASSED
 ```
 
 ## v1

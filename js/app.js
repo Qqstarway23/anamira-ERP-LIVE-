@@ -11,6 +11,7 @@ import { mountRentals } from './views/rentals.js';
 import { mountReports } from './views/reports.js';
 import { mountTeam, mountSettings, mountActivity } from './views/admin.js';
 import { recordsView } from './views/records.js';
+import { openFinesImport } from './views/fines-import.js';
 
 const app = $('#app');
 const DEMO_FLAG = 'anamira.mode';
@@ -46,11 +47,12 @@ function fleetPage(root) {
 
 function finesPage(root) {
   const v = recordsView('fines', {
-    headerExtra: () => (S.can('fines', 'write') ? html`<button class="btn ghost" data-act="match">${icon('link-2')} ${t('Match to rentals')}</button>` : ''),
-    beforeTable: () => html`<p class="muted small">${icon('info')} Add Salik and fines with the plate and time. <b>${t('Match to rentals')}</b> finds the rental that was running at that moment and adds the admin fee from Settings.</p>`,
+    headerExtra: () => (S.can('fines', 'write') ? html`<button class="btn ghost" data-act="import">${icon('upload')} ${t('Import statement')}</button>
+      <button class="btn ghost" data-act="match">${icon('link-2')} ${t('Match to rentals')}</button>` : ''),
+    beforeTable: () => html`<p class="muted small">${icon('info')} <b>${t('Import statement')}</b> reads the Salik, Dubai Police, RTA or other emirates' export (Excel or CSV) and links every row to the rental and customer that had the car at that time. <b>${t('Match to rentals')}</b> does the same for rows added by hand. The admin fee comes from Settings.</p>`,
   });
   const draw = () => v.render(root);
-  v.wire(root, { match: async () => { try { const n = await S.backend.rpc('match_fines'); toast(`${n} ✓`); await reload('fines'); } catch (e) { toast(e.message, 'err'); } } });
+  v.wire(root, { import: () => openFinesImport(), match: async () => { try { const n = await S.backend.rpc('match_fines'); toast(`${n} ✓`); await reload('fines'); } catch (e) { toast(e.message, 'err'); } } });
   draw(); return draw;
 }
 
