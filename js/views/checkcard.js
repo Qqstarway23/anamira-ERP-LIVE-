@@ -8,6 +8,7 @@ import { lookups, masters, nameOf, carLabel } from '../schema.js';
 import { FUEL } from '../rules.js';
 import { printDoc } from './doc.js';
 import { S, reload } from '../store.js';
+import { scanCar } from './scan.js';
 
 export const DAMAGE_KINDS = ['scratch', 'dent', 'crack', 'broken', 'missing', 'stain', 'burn', 'other'];
 const DAMAGE_COLOR = { scratch: '#e0a100', dent: '#e86a10', crack: '#d6336c', broken: '#c92a2a', missing: '#7048e8', stain: '#1c7ed6', burn: '#5c3d2e', other: '#495057' };
@@ -23,44 +24,6 @@ export function printQrLabels(cars) {
   printDoc('Car QR labels', '', html`<p class="terms">Stick a label inside each car (for example on the driver's door frame). Scanning it on the check-out / check-in page opens that car.</p>
     <div class="qr-labels">${cars.map((v) => html`<div class="qr-label">${raw(qrSvg(carLink(v), 3))}<b>${plate(v)}</b><small>${carName(v)}</small></div>`)}</div>`);
 }
-function carFromText(text) {
-  const s = String(text || '').trim();
-  const m = s.match(/car=([0-9a-f-]{36})/i);
-  if (m) return S.data.vehicles.find((v) => v.id === m[1]);
-  const norm = (p) => p.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  return S.data.vehicles.find((v) => norm(`${v.plate_code}${v.plate_number}`) === norm(s) || norm(v.plate_number) === norm(s));
-}
-// Camera scan with the browser's built-in detector (Chrome / Android / recent Safari). Falls back to typing the plate.
-function scanQr(onCar) {
-  const supported = 'BarcodeDetector' in window && navigator.mediaDevices?.getUserMedia;
-  let stream = null; let stop = false;
-  const w = openModal({
-    title: html`${icon('qr-code')} ${t('Scan car QR')}`,
-    body: html`${supported ? html`<video class="scan-video" playsinline muted></video><p class="muted small">${t('Point the camera at the QR label in the car.')}</p>` : html`<p class="muted">${t('This browser cannot scan QR codes. Type the plate instead.')}</p>`}
-      <form class="form" data-manual><div class="fld"><label for="scan-plate">${t('Plate')}</label><input id="scan-plate" name="plate" placeholder="DD 71278" autocomplete="off"></div>
-      <div class="form-actions"><button class="btn primary" type="submit">${icon('search')} ${t('Find car')}</button></div></form>`,
-  });
-  const done = (v) => { stop = true; stream?.getTracks().forEach((x) => x.stop()); closeModal(); onCar(v); };
-  $('[data-manual]', w).addEventListener('submit', (e) => { e.preventDefault(); const v = carFromText(e.target.plate.value); if (v) done(v); else toast(t('No car with this plate'), 'err'); });
-  new MutationObserver((_, o) => { if (!document.body.contains(w)) { o.disconnect(); stop = true; stream?.getTracks().forEach((x) => x.stop()); } }).observe(document.body, { childList: true });
-  if (!supported) return;
-  (async () => {
-    try {
-      const det = new window.BarcodeDetector({ formats: ['qr_code'] });
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      const video = $('video', w); if (!video) return;
-      video.srcObject = stream; await video.play();
-      const tick = async () => {
-        if (stop) return;
-        try { const codes = await det.detect(video); const v = codes.map((c) => carFromText(c.rawValue)).find(Boolean); if (v) return done(v); } catch { /* frame not ready */ }
-        setTimeout(tick, 250);
-      };
-      tick();
-    } catch (e) { toast(`${t('Camera not available')}: ${e.message}`, 'err'); }
-  })();
-}
-
-// ── Damage diagram ───────────────────────────────────────────────────────────
 const EXTERIOR = `<rect x="70" y="20" width="160" height="360" rx="60" fill="none" stroke="currentColor" stroke-width="3"/>
   <path d="M95 105 Q150 80 205 105 L195 150 Q150 138 105 150 Z" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M105 290 Q150 300 195 290 L205 330 Q150 350 95 330 Z" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -252,7 +215,7 @@ function wizard(root, start, onDone) {
     const form = $('form.wiz', root); const a = b.dataset.w; const val = b.dataset.v;
     if (a === 'cancel') return onDone(null);
     save(form);
-    if (a === 'scan') return scanQr((v) => { Object.assign(st, { vehicle_id: v.id, rental_id: null, movement_id: null, ...suggestFor(v) }); draw(); });
+    if (a === 'scan') return scanCar((v) => { Object.assign(st, { vehicle_id: v.id, rental_id: null, movement_id: null, ...suggestFor(v) }); draw(); });
     if (a === 'kind' || a === 'ctx') {
       if (a === 'kind') st.kind = val; else st.context = val;
       st.rental_id = rentalOptions()[0]?.id || null; st.movement_id = movementOptions()[0]?.id || null; return draw();
@@ -378,7 +341,7 @@ export function mountCheckCard(root, params) {
   };
   const startForCar = (v) => startWizard({ vehicle_id: v.id, ...suggestFor(v) });
   wireActions(root, {
-    start: () => startWizard(), scan: () => scanQr(startForCar), go: (id) => startForCar(S.data.vehicles.find((v) => v.id === id)),
+    start: () => startWizard(), scan: () => scanCar(startForCar), go: (id) => startForCar(S.data.vehicles.find((v) => v.id === id)),
     open: (id) => showCard(id), print: (id) => printCheckCard(id), kind: (k) => { q.kind = k; listView(); },
     qr: () => printQrLabels(S.data.vehicles.filter((v) => v.status !== 'retired')),
   });

@@ -1,11 +1,13 @@
 // Rentals: the heart of the system. Booking → hand-over → return, with live pricing, payments and a printable contract.
-import { html, icon, $, matches, money, fmtDateTime, fmtDate, plate, carName, csv, download, todayISO, num, round2 } from '../util.js';
+import { html, raw, icon, $, matches, money, fmtDateTime, fmtDate, plate, carName, csv, download, todayISO, num, round2 } from '../util.js';
 import { t } from '../i18n.js';
 import { table, actBtn, wireActions, formModal, openModal, closeModal, toast, badge, plateTag, readForm } from '../ui.js';
 import { lookups, carLabel, nameOf } from '../schema.js';
 import { priceRental, suggestDailyRate, overlaps, pickTariff, FUEL } from '../rules.js';
 import { customerEntries, lastBalance } from '../ledger.js';
 import { S, reload } from '../store.js';
+import { scanCar, scanIdDocument, confirmIdCustomer } from './scan.js';
+import { qrSvg, carLink } from './checkcard.js';
 
 const priorKm = (id) => S.data.vehicle_replacements.filter((x) => x.rental_id === id)
   .reduce((a, x) => a + Math.max(0, num(x.old_odometer_in) - num(x.old_odometer_out ?? x.old_odometer_in)), 0);
@@ -24,7 +26,8 @@ function carIsFree(vehicleId, startAt, endAt, exceptId) {
 }
 
 // ── New / edit rental ────────────────────────────────────────────────────────
-function rentalForm(row, prefill = {}) {
+// scan = { id, car, rateTouched }: what was scanned before the form was re-opened, to show the ticks.
+function rentalForm(row, prefill = {}, scan = {}) {
   const isNew = !row;
   const now = new Date(); now.setMinutes(0, 0, 0); now.setHours(now.getHours() + 1);
   const home = S.me?.branch_id || S.data.branches.find((b) => b.active !== false)?.id || null;
@@ -57,7 +60,32 @@ function rentalForm(row, prefill = {}) {
     },
   });
   const form = $('form', w);
-  let rateTouched = !isNew;
+  let rateTouched = !isNew || !!scan.rateTouched;
+  // Two scans for a new booking: the customer's Emirates ID (finds or creates the customer) and the QR label in the car.
+  if (isNew) {
+    const cust = S.data.customers.find((c) => c.id === r.customer_id); const car = S.data.vehicles.find((c) => c.id === r.vehicle_id);
+    form.insertAdjacentHTML('afterbegin', html`<div class="scan-bar">
+      <button type="button" class="btn ${scan.id ? 'done' : 'ghost'}" data-scan="id">${icon(scan.id ? 'check' : 'id-card')} <span>${t('Scan Emirates ID')}<small>${scan.id && cust ? cust.full_name : t('Finds or adds the customer')}</small></span></button>
+      <button type="button" class="btn ${scan.car ? 'done' : 'ghost'}" data-scan="car">${icon(scan.car ? 'check' : 'qr-code')} <span>${t('Scan car QR')}<small>${scan.car && car ? plate(car) : t('The label inside the car')}</small></span></button></div>`.toString());
+    form.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-scan]'); if (!b) return;
+      const keep = { ...readForm(form, fields) }; for (const k of Object.keys(keep)) if (keep[k] === null || keep[k] === '') delete keep[k];
+      let finished = false; let obs = null;
+      const reopen = (patch, flags) => { if (finished) return; finished = true; obs?.disconnect(); rentalForm(null, { ...prefill, ...keep, ...patch }, { ...scan, ...flags, rateTouched }); };
+      const again = (patch, flag) => reopen(patch, { [flag]: true });
+      const back = () => reopen({}, {});
+      if (b.dataset.scan === 'car') {
+        scanCar((v) => {
+          if (v.status === 'retired') { toast(`${plate(v)}: ${t('retired')}`, 'err'); return back(); }
+          if (keep.start_at && keep.end_at && !carIsFree(v.id, keep.start_at, keep.end_at)) toast(`${plate(v)} ${t('is booked for these dates')}`, 'err');
+          again({ vehicle_id: v.id }, 'car');
+        });
+      } else scanIdDocument((read) => confirmIdCustomer(read, (c) => again({ customer_id: c.id }, 'id')));
+      // Closing the scan (or the customer check) without a result brings the booking form back as it was.
+      obs = new MutationObserver(() => { if (!$('#modal')) setTimeout(() => { if (!$('#modal')) back(); }, 60); });
+      obs.observe(document.body, { childList: true });
+    });
+  }
   let card = row?.tariff_card_id ? S.data.tariff_cards.find((c) => c.id === row.tariff_card_id) : null;
   // Tariff: the customer's own card for the car's group, else the group's standard card, else the car's own rates.
   const applyTariff = (v) => {
@@ -66,7 +94,7 @@ function rentalForm(row, prefill = {}) {
     form.elements.daily_rate.value = suggestDailyRate(car, v.start_at, v.end_at, card);
     if (form.elements.km_per_day) { form.elements.km_per_day.value = card ? card.km_per_day : 0; form.elements.extra_km_rate.value = card ? card.extra_km_rate : 0; }
   };
-  if (isNew && prefill.vehicle_id) applyTariff(readForm(form, fields));
+  if (isNew && prefill.vehicle_id && !rateTouched) applyTariff(readForm(form, fields));
   const refresh = (ev) => {
     let v = readForm(form, fields);
     const car = S.data.vehicles.find((c) => c.id === (v.vehicle_id || row?.vehicle_id));
@@ -225,6 +253,7 @@ function detail(r) {
         <div class="big"><span>${t('Balance')}</span><b class="${num(b.balance) > 0 ? 'neg' : 'pos'}">${money(b.balance)}</b></div>
         <div><span>${t('Deposit')}</span><b>${money(b.deposit_held)}</b></div></section>
     </div>
+    <details class="qr-pair"><summary>${icon('qr-code')} ${t('QR codes: car and Emirates ID')}</summary><div class="c-qr">${contractQr(r, c, v)}</div></details>
     ${r.notes ? html`<p class="note">${r.notes}</p>` : ''}
     ${r.status === 'cancelled' && r.cancel_reason ? html`<p class="note">${t('Cancelled')}: ${r.cancel_reason} · ${fmtDateTime(r.cancelled_at)}</p>` : ''}
     ${reps.length ? html`<h3 class="sub">${icon('arrow-left-right')} ${t('Vehicle replacements')}</h3>${table(reps, [
@@ -272,6 +301,13 @@ function actionButtons(r, big = false) {
 }
 
 // ── Printable contract ───────────────────────────────────────────────────────
+// Two QR codes on every agreement: the car (opens its check-out / check-in) and the hirer (opens the customer record
+// with the Emirates ID; staff sign-in is needed, the code itself holds no personal data).
+export const customerLink = (c) => `${location.origin}${location.pathname}#/customers?customer=${c.id}`;
+function contractQr(r, c, v) {
+  return html`${v ? html`<figure>${raw(qrSvg(carLink(v), 3))}<figcaption><b>Car · السيارة</b><span>${plate(v)} · ${carName(v)}</span></figcaption></figure>` : ''}
+    ${c ? html`<figure>${raw(qrSvg(customerLink(c), 3))}<figcaption><b>Hirer · Emirates ID · الهوية</b><span>${c.full_name}${c.id_number ? ` · ${c.id_number}` : ''}</span></figcaption></figure>` : ''}`;
+}
 function printContract(r) {
   const x = lookups(S.data); const c = x.customers[r.customer_id]; const v = x.vehicles[r.vehicle_id]; const s = S.settings || {};
   const b = x.balances[r.id] || {};
@@ -296,6 +332,7 @@ function printContract(r) {
       ${num(b.invoiced) ? html`<tr><th>Invoiced (fines etc.)</th><td colspan="3">${money(b.invoiced)}</td></tr>` : ''}
       <tr><th>Paid</th><td>${money(b.paid)}</td><th>Balance</th><td><b>${money(b.balance)}</b></td></tr>
       <tr><th>Deposit</th><td colspan="3">${money(r.deposit)}</td></tr></table>
+    <div class="c-qr">${contractQr(r, c, v)}</div>
     <ol class="terms"><li>The hirer is responsible for all traffic fines, Salik and Darb tolls and parking charges during the rental, plus an admin fee. They are invoiced when the car is returned or when the authority reports them.</li>
       <li>The car must be returned with the same fuel level. Late returns are charged per started day after a 1-hour grace period.</li>
       <li>Only the named hirer may drive the car. Smoking is not permitted.</li><li>The deposit is returned after fines are checked.</li></ol>
@@ -364,7 +401,7 @@ export function mountRentals(root, params) {
   render(root);
   if (params.get('new') && S.can('rentals', 'write')) {
     const pre = {}; if (params.get('car')) pre.vehicle_id = params.get('car'); if (params.get('customer')) pre.customer_id = params.get('customer');
-    rentalForm(null, pre);
+    rentalForm(null, pre, { id: !!params.get('idscan') && !!pre.customer_id });
   }
   const open = params.get('open'); if (open && S.data.rentals.some((r) => r.id === open)) detail(S.data.rentals.find((r) => r.id === open));
   return () => render(root);
