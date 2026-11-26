@@ -353,3 +353,26 @@ ul.cl { list-style: none; padding: 0; margin: 0; columns: 2; font-size: .85rem; 
   .print-photos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4pt; margin: 8pt 0; } .print-photos img { width: 100%; height: 90pt; object-fit: cover; }
   .contract .sig-img { display: block; max-height: 50pt; max-width: 100%; margin-bottom: 2pt; } .contract ul.cl { columns: 2; font-size: 9pt; }
 }
+
+/* ── Scanning: car QR and Emirates ID ─────────────────────────────────────── */
+.scan-box { position: relative; border-radius: 12px; overflow: hidden; background: #000; }
+.scan-box .scan-video { display: block; max-height: 55vh; border-radius: 0; }
+.scan-box i { position: absolute; pointer-events: none; border: 3px solid rgba(255, 255, 255, .9); box-shadow: 0 0 0 999px rgba(0, 0, 0, .35); border-radius: 12px; }
+.scan-box .scan-square { width: 55%; aspect-ratio: 1; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+.scan-box .scan-card { width: 88%; aspect-ratio: 1.586; left: 50%; top: 50%; transform: translate(-50%, -50%); max-height: 92%; }
+.scan-box .scan-card em { position: absolute; left: 6%; right: 6%; bottom: 7%; height: 30%; border: 2px dashed rgba(255, 214, 0, .95); border-radius: 6px; color: #ffd600; font: 700 .7rem/1 var(--mono); display: flex; align-items: flex-end; justify-content: center; padding-bottom: .3rem; font-style: normal; }
+.scan-status { margin: .7rem 0 .2rem; color: var(--ink-2); } .scan-status.warn { color: var(--amber); font-weight: 600; } .scan-status.neg { color: var(--red); font-weight: 600; }
+.scan-result { margin-top: .8rem; padding: .7rem .9rem; background: var(--surface-2); border-radius: var(--radius-sm); } .scan-result p { margin: .2rem 0; }
+.scan-bar { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin-bottom: 1rem; }
+.scan-bar .btn { justify-content: flex-start; text-align: start; padding: .7rem .9rem; min-height: 3.4rem; }
+.scan-bar .btn span { display: flex; flex-direction: column; line-height: 1.2; } .scan-bar .btn small { font-weight: 500; color: var(--muted); font-size: .75rem; }
+.scan-bar .btn.done { background: var(--green-soft); color: var(--green); border: 1px solid var(--green); } .scan-bar .btn.done small { color: var(--ink-2); }
+@media (max-width: 560px) { .scan-bar { grid-template-columns: 1fr; } }
+.c-qr { display: flex; gap: 1.2rem; flex-wrap: wrap; margin: .6rem 0; }
+.c-qr figure { display: flex; align-items: center; gap: .6rem; margin: 0; } .c-qr svg { width: 96px; height: 96px; }
+.c-qr figcaption { display: flex; flex-direction: column; font-size: .8rem; } .c-qr figcaption span { color: var(--muted); }
+details.qr-pair { margin: .6rem 0; } details.qr-pair summary { cursor: pointer; color: var(--ink-2); font-weight: 600; }
+@media print {
+  .contract .c-qr { gap: 24pt; margin: 4pt 0 10pt; } .contract .c-qr svg { width: 70pt; height: 70pt; }
+  .contract .c-qr figcaption { font-size: 8.5pt; } .contract .c-qr figcaption span { color: #333; }
+}

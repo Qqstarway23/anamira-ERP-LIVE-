@@ -11,11 +11,11 @@ Press **Try the demo** on the login page to look around with sample data. The de
 |---|---|
 | Dashboard | Cars out, pick-ups and returns due today, overdue rentals, this month's revenue and cash, the top alerts, and a 14-day fleet timeline |
 | Alerts | One list of everything that needs attention: overdue cars, expiring insurance, registration, licences, passports and IDs, service due, staff cars overdue, garage jobs late, unmatched fines, bills due, customers over their credit limit, open damages |
-| Rentals | Book, hand over, return, take payments, print a bilingual contract. Tariff cards are picked automatically (the customer's own card first), km allowance with extra-km charge, additional driver, pick-up and return branch, extend or cut short, replace the vehicle mid-agreement, replace the driver, cancel with a reason. Every change is kept in the agreement history |
+| Rentals | Book, hand over, return, take payments, print a bilingual contract. A new booking has two scans: **Scan Emirates ID** (fills in the customer) and **Scan car QR** (picks the car); every contract prints two QR codes, one for the car and one for the hirer's Emirates ID record. Tariff cards are picked automatically (the customer's own card first), km allowance with extra-km charge, additional driver, pick-up and return branch, extend or cut short, replace the vehicle mid-agreement, replace the driver, cancel with a reason. Every change is kept in the agreement history |
 | Check-out / check-in | A phone-friendly vehicle check card: scan the car's QR label, check-list, damage diagram (exterior and interior) with photos, odometer and fuel, customer and staff signatures, printable card. It moves the rental or staff movement in the same step |
 | Fleet | Board or list, SIPP/ACRISS codes, branch, tariff group, service interval, filters for insurance/registration/service due and open damages, vehicle history (movement log, damages, check cards, revenue vs garage cost), QR labels, de-fleet |
 | Staff & custody | Non-revenue movements (NRM) and custody cars handed to employees. Fines during these go to the employee |
-| Customers | Walk-in (cash) and corporate (credit) accounts with credit limit, codes, passport, ID and licence, statement of account. **Read passport or ID** fills the form from the machine-readable lines |
+| Customers | Walk-in (cash) and corporate (credit) accounts with credit limit, codes, passport, ID and licence, statement of account. **Scan Emirates ID** reads the machine-readable lines on the back of the card (or a passport) with the phone camera, finds the customer by ID number or creates them, and keeps the ID expiry up to date. A photo or typed lines work too |
 | Garage & maintenance | Jobs per car with supplier, job type and expected date. Closing a job can mark the car's damages repaired |
 | Payments, Invoices | Receipts against agreements; invoices for fines, damage, fuel and other charges. Charged fines and tolls are invoiced automatically when a car comes back and every night (switch in Settings) |
 | Fines & Salik | Import Salik, Darb, mall parking, Police or RTA statements. Each row is linked to the agreement that had the car at that time, also after a vehicle replacement; tolls are reconciled per period |
@@ -67,7 +67,8 @@ New sign-ups get **no access** until an admin activates them on the Team page.
 ```
 index.html                 app shell with a strict Content-Security-Policy
 assets/app.css             design system (light/dark, RTL, print)
-assets/vendor/             supabase-js and qrcode-generator (MIT), vendored so no third-party script CDN is needed
+assets/vendor/             supabase-js, qrcode-generator, jsQR and Tesseract.js with an OCR-B model, vendored so no third-party script CDN is needed
+                           (supabase-js and qrcode-generator MIT; jsQR, Tesseract.js and the OCR-B model Apache-2.0. The OCR runs on the device, nothing is sent out)
 js/app.js                  boot, shell, router
 js/importer.js             reads fines/Salik statements (CSV, .xlsx, pasted rows) and detects the columns
 js/schema.js               one definition per business object (fields + columns)
