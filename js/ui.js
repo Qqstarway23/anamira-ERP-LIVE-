@@ -57,7 +57,6 @@ export function confirmBox(message, { okText = t('Confirm'), danger = false } = 
 // ── Forms ────────────────────────────────────────────────────────────────────
 // Field: { key, label, type, options, req, min, max, step, span, help, ref, refLabel, refFilter, def, show }
 export function field(f, value, ctx = {}) {
-  if (f.show && !f.show(ctx.row || {})) return '';
   const id = `f-${f.key}`;
   const v = value ?? (typeof f.def === 'function' ? f.def() : f.def) ?? '';
   const req = f.req ? raw(' required') : '';
@@ -65,10 +64,13 @@ export function field(f, value, ctx = {}) {
   let input;
   switch (f.type) {
     case 'textarea': input = html`<textarea id="${id}" name="${f.key}" rows="3"${req} maxlength="2000">${v}</textarea>`; break;
-    case 'select':
+    case 'select': {
+      // options: array of values or [value, label] pairs, or a function of the form data returning one
+      const opts = (typeof f.options === 'function' ? f.options(ctx.data || {}, ctx.row || {}) : f.options).map((o) => (Array.isArray(o) ? o : [o, t(o)]));
       input = html`<select id="${id}" name="${f.key}"${req}>${f.req ? '' : html`<option value="">—</option>`}
-        ${f.options.map((o) => html`<option value="${o}" ${String(v) === String(o) ? raw('selected') : ''}>${t(o)}</option>`)}</select>`;
+        ${opts.map(([o, l]) => html`<option value="${o}" ${String(v) === String(o) ? raw('selected') : ''}>${l}</option>`)}</select>`;
       break;
+    }
     case 'ref': {
       const rows = (ctx.data?.[f.ref] || []).filter((r) => !f.refFilter || f.refFilter(r, ctx.row || {}) || r.id === v);
       input = html`<select id="${id}" name="${f.key}"${req}><option value="">—</option>
@@ -76,16 +78,19 @@ export function field(f, value, ctx = {}) {
       break;
     }
     case 'checkbox':
-      return html`<div class="fld check ${f.span ? 'span' : ''}"><label><input type="checkbox" id="${id}" name="${f.key}" ${v ? raw('checked') : ''}> ${t(f.label)}</label></div>`;
+      return html`<div class="fld check ${f.span ? 'span' : ''}" ${f.show ? raw(`data-show-for="${esc(f.key)}"`) : ''}><label><input type="checkbox" id="${id}" name="${f.key}" ${v ? raw('checked') : ''}> ${t(f.label)}</label></div>`;
     case 'datetime': input = html`<input type="datetime-local" id="${id}" name="${f.key}" value="${localInput(v)}"${req}>`; break;
     case 'date': input = html`<input type="date" id="${id}" name="${f.key}" value="${dateInput(v)}"${req}>`; break;
     case 'money': case 'number': case 'int':
       input = html`<input type="number" inputmode="decimal" id="${id}" name="${f.key}" value="${v}" min="${f.min ?? 0}" ${f.max != null ? raw(`max="${esc(f.max)}"`) : ''} step="${f.step ?? (f.type === 'int' ? 1 : '0.01')}"${req}>`;
       break;
-    default:
-      input = html`<input type="${f.type || 'text'}" id="${id}" name="${f.key}" value="${v}" maxlength="${f.max ?? 200}"${req} ${f.pattern ? raw(`pattern="${esc(f.pattern)}"`) : ''} autocomplete="off">`;
+    default: {
+      // f.list: suggestions (array, or function of the form data) shown as a datalist; the field stays free text.
+      const list = typeof f.list === 'function' ? f.list(ctx.data || {}, ctx.row || {}) : f.list;
+      input = html`<input type="${f.type || 'text'}" id="${id}" name="${f.key}" value="${v}" maxlength="${f.max ?? 200}"${req} ${f.pattern ? raw(`pattern="${esc(f.pattern)}"`) : ''} ${list ? raw(`list="dl-${esc(f.key)}"`) : ''} autocomplete="off">${list ? html`<datalist id="dl-${f.key}">${[...new Set(list)].map((o) => html`<option value="${o}"></option>`)}</datalist>` : ''}`;
+    }
   }
-  return html`<div class="fld ${f.span ? 'span' : ''}">${label}${input}${f.help ? html`<small class="muted">${t(f.help)}</small>` : ''}</div>`;
+  return html`<div class="fld ${f.span ? 'span' : ''}" ${f.show ? raw(`data-show-for="${esc(f.key)}"`) : ''}>${label}${input}${f.help ? html`<small class="muted">${t(f.help)}</small>` : ''}</div>`;
 }
 
 export function readForm(form, fields) {
@@ -118,6 +123,18 @@ export function formModal({ title, fields, row = {}, data, onSubmit, submitText 
     onMount,
   });
   const form = $('form', w);
+  // Fields with show(values) appear only when it returns true; hidden ones are disabled so they are neither validated nor saved.
+  const conditional = fields.filter((f) => f.show);
+  const syncShow = () => {
+    if (!conditional.length) return;
+    const vals = { ...row, ...readForm(form, fields) };
+    for (const f of conditional) {
+      const box = form.querySelector(`[data-show-for="${f.key}"]`); if (!box) continue;
+      const vis = !!f.show(vals);
+      box.hidden = !vis; box.querySelectorAll('input,select,textarea').forEach((el) => { el.disabled = !vis; });
+    }
+  };
+  form.addEventListener('change', syncShow); syncShow();
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const err = $('.form-error', form);
@@ -137,6 +154,9 @@ const TONE = {
   retired: 'gray', open: 'orange', done: 'green', new: 'amber', charged: 'blue', company: 'violet', unmatched: 'red', paid: 'green',
   disputed: 'red', payment: 'green', refund: 'red', deposit: 'violet', deposit_return: 'gray', overdue: 'red',
   admin: 'violet', manager: 'blue', agent: 'green', accountant: 'amber',
+  nrm: 'violet', custody: 'violet', closed: 'gray', employee: 'violet', void: 'gray', repaired: 'green', cash: 'gray', credit: 'blue',
+  checkout: 'blue', checkin: 'green', minor: 'amber', major: 'red', receipt: 'green', handed_over: 'blue', opened: 'amber', closed_ok: 'green',
+  extended: 'blue', cut_short: 'amber', vehicle_replaced: 'violet', driver_replaced: 'violet', edited: 'gray',
 };
 export const badge = (s, label) => html`<span class="badge ${TONE[s] || 'gray'}">${label ?? t(s)}</span>`;
 export const plateTag = (v) => (v ? html`<span class="plate"><i>${v.plate_code || '·'}</i>${v.plate_number}</span>` : '—');

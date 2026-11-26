@@ -5,5 +5,5 @@ export const CONFIG = Object.freeze({
   supabaseUrl: 'https://yloxwfmgaiyednlepvvv.supabase.co',
   supabaseKey: 'sb_publishable_3pUjiT4Y609BhGei2y-aAQ_wpYlwCTq',
   appName: 'Anamira Car Rental',
-  version: '2.0.0',
+  version: '2.1.0',
 });

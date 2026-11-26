@@ -1,7 +1,7 @@
 // Boot, app shell and router.
-import { html, icon, $, mount, money, plate, carName, esc } from './util.js';
+import { html, icon, $, mount } from './util.js';
 import { t, getLang, setLang } from './i18n.js';
-import { toast, closeModal, badge, plateTag, confirmBox, actBtn, formModal } from './ui.js';
+import { toast, closeModal, badge, confirmBox, formModal } from './ui.js';
 import { S, loadAll, onData, startLive, reload } from './store.js';
 import { createLiveBackend } from './backend-live.js';
 import { createDemoBackend } from './backend-demo.js';
@@ -10,7 +10,17 @@ import { mountDashboard } from './views/dashboard.js';
 import { mountRentals } from './views/rentals.js';
 import { mountReports } from './views/reports.js';
 import { mountTeam, mountSettings, mountActivity } from './views/admin.js';
-import { recordsView } from './views/records.js';
+import { recordsView, simplePage as simple } from './views/records.js';
+import { openFinesImport } from './views/fines-import.js';
+import { fleetPage, movementsPage, maintenancePage } from './views/fleet.js';
+import { mountCheckCard } from './views/checkcard.js';
+import { invoicesPage, billsPage, vouchersPage } from './views/money.js';
+import { mountAccounts } from './views/accounts.js';
+import { mountSetup, mountPeople } from './views/setup.js';
+import { mountOpsReports } from './views/ops-reports.js';
+import { mountAlerts } from './views/alerts.js';
+import { mountCustomers } from './views/customers.js';
+import { CONFIG } from './config.js';
 
 const app = $('#app');
 const DEMO_FLAG = 'anamira.mode';
@@ -21,62 +31,55 @@ const applyTheme = (th) => { if (th) document.documentElement.dataset.theme = th
 applyTheme(store.get('anamira.theme'));
 
 // ── Pages built from the generic records view ────────────────────────────────
-function fleetPage(root) {
-  let board = store.get('anamira.fleetView') !== 'list';
-  const v = recordsView('vehicles', {
-    viewToggle: Object.assign(() => html`<div class="seg"><button class="${board ? 'on' : ''}" data-act="board" data-id="1">${t('Board')}</button><button class="${!board ? 'on' : ''}" data-act="board" data-id="">${t('List')}</button></div>`, {
-      custom: (list) => (board ? html`<div class="car-grid">${list.map((c) => {
-        const r = S.data.rentals.find((x) => x.vehicle_id === c.id && x.status === 'active');
-        const next = S.data.rentals.filter((x) => x.vehicle_id === c.id && x.status === 'booked').sort((a, b) => new Date(a.start_at) - new Date(b.start_at))[0];
-        const cust = (id) => S.data.customers.find((x) => x.id === id)?.full_name;
-        return html`<article class="car-card ${c.status}">
-          <header>${plateTag(c)}${badge(c.status)}</header>
-          <h3>${carName(c)}</h3><p class="muted">${c.year || ''} · ${t(c.category)}${c.color ? ' · ' + c.color : ''} · ${(+c.odometer).toLocaleString()} km</p>
-          <div class="price">${money(c.daily_rate)}<small>/day</small></div>
-          ${r ? html`<p class="small">${icon('clock')} ${cust(r.customer_id)} · <a href="#/rentals?open=${r.id}">${r.ref}</a></p>` : next ? html`<p class="small muted">${icon('calendar')} ${t('booked')} ${new Date(next.start_at).toLocaleDateString('en-GB')}</p>` : html`<p class="small muted">&nbsp;</p>`}
-          <footer>${c.status === 'available' && S.can('rentals', 'write') ? html`<a class="btn sm primary" href="#/rentals?new=1&car=${c.id}">${icon('key-round')} ${t('New rental')}</a>` : ''}
-            ${S.can('vehicles', 'write') ? actBtn('edit', c.id, 'pencil', 'Edit') : ''}</footer></article>`;
-      })}</div>` : null),
-    }),
-  });
-  const draw = () => v.render(root);
-  v.wire(root, { board: (on) => { board = !!on; store.set('anamira.fleetView', board ? 'board' : 'list'); draw(); } });
-  draw(); return draw;
-}
-
 function finesPage(root) {
   const v = recordsView('fines', {
-    headerExtra: () => (S.can('fines', 'write') ? html`<button class="btn ghost" data-act="match">${icon('link-2')} ${t('Match to rentals')}</button>` : ''),
-    beforeTable: () => html`<p class="muted small">${icon('info')} Add Salik and fines with the plate and time. <b>${t('Match to rentals')}</b> finds the rental that was running at that moment and adds the admin fee from Settings.</p>`,
+    headerExtra: () => (S.can('fines', 'write') ? html`<button class="btn ghost" data-act="import">${icon('upload')} ${t('Import statement')}</button>
+      <button class="btn ghost" data-act="match">${icon('link-2')} ${t('Match to rentals')}</button>
+      <a class="btn ghost" href="#/opsreports?r=tolls">${icon('badge-check')} ${t('Reconcile')}</a>` : ''),
+    presets: { notinv: { label: 'Charged, not invoiced', fn: (f) => f.status === 'charged' && !f.invoice_id }, staff: { label: 'Charged to employees', fn: (f) => f.status === 'employee' } },
+    beforeTable: () => html`<p class="muted small">${icon('info')} <b>${t('Import statement')}</b> reads the Salik, Darb, mall parking, Dubai Police, RTA or other emirates' export (Excel or CSV) and links every row to the rental and customer that had the car at that time, even after a vehicle replacement. Fines during staff use or custody go to the employee. <b>${t('Match to rentals')}</b> does the same for rows added by hand. The admin fee comes from Settings.</p>`,
   });
   const draw = () => v.render(root);
-  v.wire(root, { match: async () => { try { const n = await S.backend.rpc('match_fines'); toast(`${n} ✓`); await reload('fines'); } catch (e) { toast(e.message, 'err'); } } });
+  v.wire(root, { import: () => openFinesImport(), match: async () => { try { const n = await S.backend.rpc('match_fines'); toast(`${n} ✓`); await reload('fines'); } catch (e) { toast(e.message, 'err'); } } });
   draw(); return draw;
 }
 
-function maintenancePage(root) {
-  const v = recordsView('maintenance', { rowActions: (m) => (m.status === 'open' && S.can('maintenance', 'write') ? actBtn('done', m.id, 'check', 'Mark done') : '') });
-  const draw = () => v.render(root);
-  v.wire(root, { done: async (id) => { try { await S.backend.update('maintenance', id, { status: 'done' }); toast(t('Saved')); await reload('maintenance'); } catch (e) { toast(e.message, 'err'); } } });
-  draw(); return draw;
+function changePassword() {
+  formModal({
+    title: t('Change password'), wide: false, submitText: t('Save'),
+    fields: [{ key: 'password', label: 'New password', type: 'password', req: true, max: 72 }, { key: 'again', label: 'Repeat new password', type: 'password', req: true, max: 72 }],
+    onSubmit: async (v) => {
+      if ((v.password || '').length < 10) throw new Error(t('Use at least 10 characters.'));
+      if (v.password !== v.again) throw new Error(t('The two passwords are different.'));
+      await S.backend.updatePassword(v.password); toast(t('Saved'));
+    },
+  });
 }
-
-const simple = (name) => (root) => { const v = recordsView(name); v.wire(root); v.render(root); return () => v.render(root); };
 
 // ── Routes ───────────────────────────────────────────────────────────────────
 const ROUTES = [
   { id: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard', group: 'Operations', mount: mountDashboard },
+  { id: 'alerts', label: 'Alerts', icon: 'bell', group: 'Operations', mount: mountAlerts },
   { id: 'rentals', label: 'Rentals', icon: 'key-round', group: 'Operations', mount: mountRentals },
+  { id: 'checkcard', label: 'Check-out / check-in', icon: 'clipboard-check', group: 'Operations', mount: mountCheckCard },
   { id: 'fleet', label: 'Fleet', icon: 'car', group: 'Operations', mount: fleetPage },
-  { id: 'customers', label: 'Customers', icon: 'users', group: 'Operations', mount: simple('customers') },
-  { id: 'maintenance', label: 'Maintenance', icon: 'wrench', group: 'Operations', mount: maintenancePage },
+  { id: 'movements', label: 'Staff & custody', icon: 'route', group: 'Operations', mount: movementsPage },
+  { id: 'customers', label: 'Customers', icon: 'users', group: 'Operations', mount: mountCustomers },
+  { id: 'maintenance', label: 'Garage & maintenance', icon: 'wrench', group: 'Operations', mount: maintenancePage },
   { id: 'payments', label: 'Payments', icon: 'wallet', group: 'Money', mount: simple('payments') },
+  { id: 'invoices', label: 'Invoices', icon: 'file-text', group: 'Money', mount: invoicesPage },
   { id: 'fines', label: 'Fines & Salik', icon: 'siren', group: 'Money', mount: finesPage },
+  { id: 'bills', label: 'Supplier bills', icon: 'scroll', group: 'Money', mount: billsPage, perm: ['bills', 'read'] },
+  { id: 'vouchers', label: 'Vouchers', icon: 'banknote', group: 'Money', mount: vouchersPage, perm: ['vouchers', 'read'] },
   { id: 'expenses', label: 'Expenses', icon: 'receipt', group: 'Money', mount: simple('expenses'), perm: ['expenses', 'read'] },
-  { id: 'reports', label: 'Reports', icon: 'chart-column', group: 'Money', mount: mountReports },
-  { id: 'team', label: 'Team', icon: 'user-cog', group: 'Admin', mount: mountTeam, perm: ['profiles', 'read'] },
-  { id: 'activity', label: 'Activity', icon: 'history', group: 'Admin', mount: mountActivity, perm: ['activity', 'read'] },
-  { id: 'settings', label: 'Settings', icon: 'settings', group: 'Admin', mount: mountSettings },
+  { id: 'accounts', label: 'Accounts', icon: 'scale', group: 'Money', mount: mountAccounts },
+  { id: 'reports', label: 'Reports', icon: 'chart-column', group: 'Reports', mount: mountReports },
+  { id: 'opsreports', label: 'Operational reports', icon: 'calendar-days', group: 'Reports', mount: mountOpsReports },
+  { id: 'people', label: 'Employees & suppliers', icon: 'id-card', group: 'Setup', mount: mountPeople },
+  { id: 'setup', label: 'Setup', icon: 'list', group: 'Setup', mount: mountSetup },
+  { id: 'team', label: 'Team', icon: 'user-cog', group: 'Setup', mount: mountTeam, perm: ['profiles', 'read'] },
+  { id: 'activity', label: 'Activity', icon: 'history', group: 'Setup', mount: mountActivity, perm: ['activity', 'read'] },
+  { id: 'settings', label: 'Settings', icon: 'settings', group: 'Setup', mount: mountSettings },
 ];
 const allowed = (r) => !r.perm || S.can(...r.perm);
 
@@ -102,11 +105,11 @@ function $$nav() {
 }
 
 function shell() {
-  const groups = ['Operations', 'Money', 'Admin'];
+  const groups = ['Operations', 'Money', 'Reports', 'Setup'];
   const demo = S.backend.mode === 'demo';
   mount(app, html`<div id="shell" class="shell">
     <aside class="side">
-      <a class="brand" href="#/dashboard"><img class="logo" src="assets/logo.png" alt="" width="46" height="46"><span>${S.settings?.company_name || 'Anamira'}<small>ERP · v2</small></span></a>
+      <a class="brand" href="#/dashboard"><img class="logo" src="assets/logo.png" alt="" width="46" height="46"><span>${S.settings?.company_name || 'Anamira'}<small>ERP · v${CONFIG.version}</small></span></a>
       <nav id="nav">${groups.map((g) => {
         const items = ROUTES.filter((r) => r.group === g && allowed(r));
         return items.length ? html`<p class="nav-group">${t(g)}</p>${items.map((r) => html`<a href="#/${r.id}" data-id="${r.id}">${icon(r.icon)}<span>${t(r.label)}</span></a>`)}` : '';
@@ -116,6 +119,7 @@ function shell() {
         <div class="side-tools">
           <button class="icon-btn" data-ui="theme" title="${t('Theme')}" aria-label="${t('Theme')}">${icon('moon')}</button>
           <button class="icon-btn" data-ui="lang" title="${t('Language')}" aria-label="${t('Language')}">${icon('languages')}</button>
+          ${demo ? '' : html`<button class="icon-btn" data-ui="pw" title="${t('Change password')}" aria-label="${t('Change password')}">${icon('key-square')}</button>`}
           <button class="icon-btn" data-ui="out" title="${demo ? t('Exit demo') : t('Sign out')}" aria-label="${t('Sign out')}">${icon('log-out')}</button>
         </div>
       </div>
@@ -131,6 +135,7 @@ function shell() {
     const b = e.target.closest('[data-ui]'); if (!b || b.tagName === 'SELECT') return;
     const a = b.dataset.ui;
     if (a === 'menu') $('#shell').classList.toggle('nav-open');
+    if (a === 'pw') changePassword();
     if (a === 'theme') {
       const dark = document.documentElement.dataset.theme === 'dark';
       const th = dark ? 'light' : 'dark'; store.set('anamira.theme', th); applyTheme(th);
